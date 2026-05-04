@@ -278,13 +278,13 @@ function AdminPanel({ data, onLogout }) {
   const [tab, setTab] = useState('dishes');
   const [dishes, setDishes] = useState([]);
   const [users, setUsers] = useState([]);
-  const [categoryForm, setCategoryForm] = useState({ id: null, name_fr: '', name_ar: '', sort_order: 0 });
+  const [categoryForm, setCategoryForm] = useState({ id: null, name_fr: '', name_ar: '', description_ar: '' });
   const [subcategoryForm, setSubcategoryForm] = useState({
     id: null,
     category_id: '',
     name_fr: '',
     name_ar: '',
-    sort_order: 0
+    description_ar: ''
   });
   const [dishForm, setDishForm] = useState(emptyDish);
   const [userForm, setUserForm] = useState({ id: null, name: '', email: '', password: '', role: 'admin' });
@@ -350,7 +350,7 @@ function AdminPanel({ data, onLogout }) {
     } else {
       await api.post('/admin/categories', categoryForm);
     }
-    setCategoryForm({ id: null, name_fr: '', name_ar: '', sort_order: 0 });
+    setCategoryForm({ id: null, name_fr: '', name_ar: '', description_ar: '' });
     await loadMeta();
   };
 
@@ -361,7 +361,7 @@ function AdminPanel({ data, onLogout }) {
     } else {
       await api.post('/admin/subcategories', subcategoryForm);
     }
-    setSubcategoryForm({ id: null, category_id: '', name_fr: '', name_ar: '', sort_order: 0 });
+    setSubcategoryForm({ id: null, category_id: '', name_fr: '', name_ar: '', description_ar: '' });
     await loadMeta();
   };
 
@@ -470,7 +470,7 @@ function AdminPanel({ data, onLogout }) {
               <h2>{categoryForm.id ? 'Modifier categorie' : 'Ajouter categorie'}</h2>
               <input required placeholder="Categorie FR" value={categoryForm.name_fr} onChange={(e) => setCategoryForm({ ...categoryForm, name_fr: e.target.value })} />
               <input placeholder="Categorie AR" value={categoryForm.name_ar || ''} onChange={(e) => setCategoryForm({ ...categoryForm, name_ar: e.target.value })} />
-              <input type="number" placeholder="Ordre" value={categoryForm.sort_order} onChange={(e) => setCategoryForm({ ...categoryForm, sort_order: e.target.value })} />
+              <textarea placeholder="Description AR" value={categoryForm.description_ar || ''} onChange={(e) => setCategoryForm({ ...categoryForm, description_ar: e.target.value })} />
               <button className="primaryButton" type="submit">
                 <Plus size={17} /> Enregistrer
               </button>
@@ -488,7 +488,7 @@ function AdminPanel({ data, onLogout }) {
               </select>
               <input required placeholder="Sous-categorie FR" value={subcategoryForm.name_fr} onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name_fr: e.target.value })} />
               <input placeholder="Sous-categorie AR" value={subcategoryForm.name_ar || ''} onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name_ar: e.target.value })} />
-              <input type="number" placeholder="Ordre" value={subcategoryForm.sort_order} onChange={(e) => setSubcategoryForm({ ...subcategoryForm, sort_order: e.target.value })} />
+              <textarea placeholder="Description AR" value={subcategoryForm.description_ar || ''} onChange={(e) => setSubcategoryForm({ ...subcategoryForm, description_ar: e.target.value })} />
               <button className="primaryButton" type="submit">
                 <Plus size={17} /> Enregistrer
               </button>
