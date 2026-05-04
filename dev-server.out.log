@@ -1,0 +1,30 @@
+
+> menu-paradise-digital@1.0.0 dev
+> concurrently "npm run server" "npm run client"
+
+[0] 
+[0] > menu-paradise-digital@1.0.0 server
+[0] > node server/src/index.js
+[0] 
+[1] 
+[1] > menu-paradise-digital@1.0.0 client
+[1] > vite --host 0.0.0.0
+[1] 
+[0] ◇ injected env (11) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+[1] Port 5173 is in use, trying another one...
+[1] 
+[1]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m254[22m[2m[0m ms[22m
+[1] 
+[1]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[1]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.100.40:[1m5174[22m/[39m
+[0] ◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+[0] API Menu Paradise sur http://localhost:5000
+[0] npm run server exited with code 0
+[1] [2m4:39:17 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/main.jsx[22m
+[1] [2m4:39:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[1] [2m4:43:04 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/main.jsx[22m
+[1] [2m4:43:38 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[1] [2m4:45:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[1] [2m5:01:41 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[1] [2m5:03:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/main.jsx[22m
+[1] [2m5:03:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css[22m
