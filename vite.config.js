@@ -9,8 +9,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://148.230.125.221:3309',
-      '/uploads': 'http://148.230.125.221:3309'
+      '/api': 'https://148-230-125-221.sslip.io',
+      '/uploads': 'https://148-230-125-221.sslip.io'
     }
   }
 });
