@@ -21,7 +21,7 @@ function publicDish(row) {
   return {
     ...row,
     price: Number(row.price),
-    image_url: row.image_url ? `/uploads/${row.image_url}` : null
+    image_url: row.image_url ? `${process.env.API_BASE_URL || ''}/uploads/${row.image_url}` : null
   };
 }
 
