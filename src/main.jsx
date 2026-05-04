@@ -19,7 +19,7 @@ import {
 import './styles.css';
 import logoUrl from '../logo.png';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL: 'http://148.230.125.221:3309/api' });
 
 function getToken() {
   return localStorage.getItem('token');

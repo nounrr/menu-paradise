@@ -242,7 +242,7 @@ app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) =
   res.json({ ok: true });
 });
 
-app.get('*', (_req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(path.resolve('dist', 'index.html'));
 });
 
