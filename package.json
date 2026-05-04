@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node index.js",
+    "build": "vite build",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node server/src/index.js",
     "client": "vite --host 0.0.0.0",
-    "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "images:webp": "node scripts/optimize-images.js",
     "db:migrate": "node server/scripts/migrate.js",
     "db:assign-images": "node server/scripts/assign-images.js",
     "db:seed-admin": "node server/scripts/seed-admin.js"
