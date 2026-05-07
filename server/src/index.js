@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import multer from 'multer';
 import path from 'path';
 import { pool } from './db.js';
 import { requireAdmin, requireAuth, signToken } from './auth.js';
@@ -248,6 +249,9 @@ app.get('/{*path}', (_req, res) => {
 
 app.use((err, _req, res, _next) => {
   console.error(err);
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'Image trop lourde. Taille maximale: 12 MB.' });
+  }
   res.status(500).json({ message: err.message || 'Erreur serveur' });
 });
 

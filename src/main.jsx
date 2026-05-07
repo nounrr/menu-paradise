@@ -315,6 +315,8 @@ function AdminPanel({ data, onLogout }) {
   const [dishForm, setDishForm] = useState(emptyDish);
   const [userForm, setUserForm] = useState({ id: null, name: '', email: '', password: '', role: 'admin' });
   const [image, setImage] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [dishError, setDishError] = useState('');
 
   const loadAdmin = async () => {
     const [dishRes, userRes] = await Promise.all([api.get('/admin/dishes'), api.get('/admin/users')]);
@@ -326,23 +328,42 @@ function AdminPanel({ data, onLogout }) {
     loadAdmin().catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (!image) {
+      setImagePreviewUrl('');
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(image);
+    setImagePreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [image]);
+
   const subcategories = meta.subcategories.filter(
     (item) => !dishForm.category_id || item.category_id === Number(dishForm.category_id)
   );
 
   const submitDish = async (event) => {
     event.preventDefault();
+    setDishError('');
     const form = new FormData();
     Object.entries(dishForm).forEach(([key, value]) => form.append(key, value ?? ''));
     if (image) form.append('image', image);
 
-    if (dishForm.id) {
-      await api.put(`/admin/dishes/${dishForm.id}`, form);
-    } else {
-      await api.post('/admin/dishes', form);
+    try {
+      if (dishForm.id) {
+        await api.put(`/admin/dishes/${dishForm.id}`, form);
+      } else {
+        await api.post('/admin/dishes', form);
+      }
+    } catch (err) {
+      setDishError(err.response?.data?.message || 'Impossible d\'envoyer le plat');
+      return;
     }
     setDishForm(emptyDish);
     setImage(null);
+    setImagePreviewUrl('');
     await loadAdmin();
   };
 
@@ -465,6 +486,13 @@ function AdminPanel({ data, onLogout }) {
               <ImagePlus size={17} /> Image du plat
               <input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] || null)} />
             </label>
+            {image && <p className="fileMeta">Image upload: {image.name}</p>}
+            {imagePreviewUrl && (
+              <div className="imagePreview">
+                <img src={imagePreviewUrl} alt="Apercu de l'image a uploader" />
+              </div>
+            )}
+            {dishError && <p className="error">{dishError}</p>}
             <button className="primaryButton" type="submit">
               <Plus size={17} /> Enregistrer
             </button>
