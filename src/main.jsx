@@ -19,7 +19,32 @@ import {
 import './styles.css';
 import logoUrl from '../logo.png';
 
-const api = axios.create({ baseURL: 'https://148-230-125-221.sslip.io/api' });
+const API_BASE_URL = 'https://148-230-125-221.sslip.io/api';
+const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
+const api = axios.create({ baseURL: API_BASE_URL });
+
+function resolveDishImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+
+  if (/^https?:\/\//i.test(imageUrl)) {
+    try {
+      const url = new URL(imageUrl);
+      if (url.pathname.startsWith('/uploads/')) {
+        return `${BACKEND_BASE_URL}${url.pathname}`;
+      }
+      return imageUrl;
+    } catch {
+      return imageUrl;
+    }
+  }
+
+  const normalizedPath = imageUrl.startsWith('/uploads/')
+    ? imageUrl
+    : `/uploads/${imageUrl.replace(/^\/+/, '')}`;
+
+  return `${BACKEND_BASE_URL}${normalizedPath}`;
+}
 
 function getToken() {
   return localStorage.getItem('token');
@@ -56,8 +81,10 @@ function useMenuData() {
 }
 
 function DishImage({ dish }) {
-  if (dish.image_url) {
-    return <img src={dish.image_url} alt={dish.name_fr} />;
+  const imageSrc = resolveDishImageUrl(dish.image_url);
+
+  if (imageSrc) {
+    return <img src={imageSrc} alt={dish.name_fr} />;
   }
 
   return (
