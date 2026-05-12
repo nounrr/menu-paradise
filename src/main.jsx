@@ -22,6 +22,13 @@ import logoUrl from '../logo.png';
 const API_BASE_URL = 'https://148-230-125-221.sslip.io/api';
 const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const PAGE_SIZE = 20;
+const DEFAULT_META = { categories: [], subcategories: [] };
+const DEFAULT_PAGINATION = {
+  page: 1,
+  limit: PAGE_SIZE,
+  totalItems: 0,
+  totalPages: 1
+};
 
 const api = axios.create({ baseURL: API_BASE_URL });
 
@@ -51,6 +58,26 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
+function normalizeMeta(data) {
+  return {
+    categories: Array.isArray(data?.categories) ? data.categories : [],
+    subcategories: Array.isArray(data?.subcategories) ? data.subcategories : []
+  };
+}
+
+function normalizePagination(data) {
+  return {
+    page: Number(data?.page) > 0 ? Number(data.page) : DEFAULT_PAGINATION.page,
+    limit: Number(data?.limit) > 0 ? Number(data.limit) : DEFAULT_PAGINATION.limit,
+    totalItems: Number(data?.totalItems) >= 0 ? Number(data.totalItems) : DEFAULT_PAGINATION.totalItems,
+    totalPages: Number(data?.totalPages) > 0 ? Number(data.totalPages) : DEFAULT_PAGINATION.totalPages
+  };
+}
+
+function normalizeDishItems(data) {
+  return Array.isArray(data?.items) ? data.items : [];
+}
+
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -58,27 +85,29 @@ api.interceptors.request.use((config) => {
 });
 
 function useMenuData() {
-  const [meta, setMeta] = useState({ categories: [], subcategories: [] });
+  const [meta, setMeta] = useState(DEFAULT_META);
   const [dishes, setDishes] = useState([]);
-  const [dishPagination, setDishPagination] = useState({
-    page: 1,
-    limit: PAGE_SIZE,
-    totalItems: 0,
-    totalPages: 1
-  });
+  const [dishPagination, setDishPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(true);
 
   const loadMeta = async () => {
     const { data } = await api.get('/categories');
-    setMeta(data);
+    setMeta(normalizeMeta(data));
   };
 
   const loadDishes = async (params = {}) => {
     setLoading(true);
-    const { data } = await api.get('/dishes', { params });
-    setDishes(data.items);
-    setDishPagination(data.pagination);
-    setLoading(false);
+    try {
+      const { data } = await api.get('/dishes', { params });
+      setDishes(normalizeDishItems(data));
+      setDishPagination(normalizePagination(data?.pagination));
+    } catch (error) {
+      setDishes([]);
+      setDishPagination(DEFAULT_PAGINATION);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -103,7 +132,13 @@ function DishImage({ dish }) {
 }
 
 function PublicMenu({ data }) {
-  const { meta, dishes, dishPagination, loading, loadDishes } = data;
+  const {
+    meta = DEFAULT_META,
+    dishes = [],
+    dishPagination = DEFAULT_PAGINATION,
+    loading = false,
+    loadDishes = () => Promise.resolve()
+  } = data ?? {};
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [q, setQ] = useState('');
