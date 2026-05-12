@@ -75,7 +75,29 @@ function normalizePagination(data) {
 }
 
 function normalizeDishItems(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
   return Array.isArray(data?.items) ? data.items : [];
+}
+
+function resolveDishPagination(data, items) {
+  if (Array.isArray(data)) {
+    return {
+      ...DEFAULT_PAGINATION,
+      totalItems: items.length
+    };
+  }
+
+  if (data?.pagination) {
+    return normalizePagination(data.pagination);
+  }
+
+  return {
+    ...DEFAULT_PAGINATION,
+    totalItems: items.length
+  };
 }
 
 api.interceptors.request.use((config) => {
@@ -99,8 +121,9 @@ function useMenuData() {
     setLoading(true);
     try {
       const { data } = await api.get('/dishes', { params });
-      setDishes(normalizeDishItems(data));
-      setDishPagination(normalizePagination(data?.pagination));
+      const items = normalizeDishItems(data);
+      setDishes(items);
+      setDishPagination(resolveDishPagination(data, items));
     } catch (error) {
       setDishes([]);
       setDishPagination(DEFAULT_PAGINATION);
