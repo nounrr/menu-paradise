@@ -21,6 +21,7 @@ import logoUrl from '../logo.png';
 
 const API_BASE_URL = 'https://148-230-125-221.sslip.io/api';
 const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const PAGE_SIZE = 20;
 
 const api = axios.create({ baseURL: API_BASE_URL });
 
@@ -59,6 +60,12 @@ api.interceptors.request.use((config) => {
 function useMenuData() {
   const [meta, setMeta] = useState({ categories: [], subcategories: [] });
   const [dishes, setDishes] = useState([]);
+  const [dishPagination, setDishPagination] = useState({
+    page: 1,
+    limit: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1
+  });
   const [loading, setLoading] = useState(true);
 
   const loadMeta = async () => {
@@ -69,15 +76,16 @@ function useMenuData() {
   const loadDishes = async (params = {}) => {
     setLoading(true);
     const { data } = await api.get('/dishes', { params });
-    setDishes(data);
+    setDishes(data.items);
+    setDishPagination(data.pagination);
     setLoading(false);
   };
 
   useEffect(() => {
-    Promise.all([loadMeta(), loadDishes()]).catch(console.error);
+    Promise.all([loadMeta(), loadDishes({ page: 1, limit: PAGE_SIZE })]).catch(console.error);
   }, []);
 
-  return { meta, dishes, loading, loadMeta, loadDishes };
+  return { meta, dishes, dishPagination, loading, loadMeta, loadDishes };
 }
 
 function DishImage({ dish }) {
@@ -95,8 +103,7 @@ function DishImage({ dish }) {
 }
 
 function PublicMenu({ data }) {
-  const { meta, dishes, loading, loadDishes } = data;
-  const pageSize = 30;
+  const { meta, dishes, dishPagination, loading, loadDishes } = data;
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [q, setQ] = useState('');
@@ -132,12 +139,6 @@ function PublicMenu({ data }) {
     [meta.subcategories, categoryId]
   );
 
-  const totalPages = Math.max(1, Math.ceil(dishes.length / pageSize));
-  const visibleDishes = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return dishes.slice(start, start + pageSize);
-  }, [dishes, page]);
-
   useEffect(() => {
     if (!categoryId && meta.categories.length > 0) {
       setCategoryId(String(meta.categories[0].id));
@@ -150,17 +151,17 @@ function PublicMenu({ data }) {
   }, [categoryId, subcategoryId, q]);
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    if (page !== dishPagination.page) {
+      setPage(dishPagination.page);
     }
-  }, [page, totalPages]);
+  }, [dishPagination.page, page]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadDishes({ categoryId, subcategoryId, q });
+      loadDishes({ categoryId, subcategoryId, q, page, limit: PAGE_SIZE });
     }, 180);
     return () => clearTimeout(timer);
-  }, [categoryId, subcategoryId, q]);
+  }, [categoryId, subcategoryId, q, page]);
 
   return (
     <main className="menuShell appMenuShell">
@@ -226,7 +227,7 @@ function PublicMenu({ data }) {
         </section>
 
         <div className="sectionTitle recommendedTitle">
-          <span>{loading ? '...' : `${dishes.length} ${text.products}`}</span>
+          <span>{loading ? '...' : `${dishPagination.totalItems} ${text.products}`}</span>
         </div>
 
         <AnimatePresence mode="wait">
@@ -241,7 +242,7 @@ function PublicMenu({ data }) {
             {loading ? (
               <p className="empty">{text.loading}</p>
             ) : dishes.length ? (
-              visibleDishes.map((dish) => (
+              dishes.map((dish) => (
                 <motion.article
                   layout
                   className={`dishCard${field(dish, 'description') ? ' hasDescription' : ''}`}
@@ -268,15 +269,19 @@ function PublicMenu({ data }) {
           </motion.section>
         </AnimatePresence>
 
-        {!loading && dishes.length > pageSize && (
+        {!loading && dishPagination.totalPages > 1 && (
           <nav className="pagination" aria-label="Pagination">
             <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>
               {text.previous}
             </button>
             <span>
-              {text.page} {page} / {totalPages}
+              {text.page} {page} / {dishPagination.totalPages}
             </span>
-            <button type="button" disabled={page === totalPages} onClick={() => setPage((current) => current + 1)}>
+            <button
+              type="button"
+              disabled={page === dishPagination.totalPages}
+              onClick={() => setPage((current) => current + 1)}
+            >
               {text.next}
             </button>
           </nav>
@@ -304,6 +309,13 @@ function AdminPanel({ data, onLogout }) {
   const { meta, loadMeta } = data;
   const [tab, setTab] = useState('dishes');
   const [dishes, setDishes] = useState([]);
+  const [dishPage, setDishPage] = useState(1);
+  const [dishPagination, setDishPagination] = useState({
+    page: 1,
+    limit: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1
+  });
   const [users, setUsers] = useState([]);
   const [categoryForm, setCategoryForm] = useState({ id: null, name_fr: '', name_ar: '' });
   const [subcategoryForm, setSubcategoryForm] = useState({
@@ -318,14 +330,26 @@ function AdminPanel({ data, onLogout }) {
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [dishError, setDishError] = useState('');
 
-  const loadAdmin = async () => {
-    const [dishRes, userRes] = await Promise.all([api.get('/admin/dishes'), api.get('/admin/users')]);
-    setDishes(dishRes.data);
-    setUsers(userRes.data);
+  const loadAdminDishes = async (nextPage = dishPage) => {
+    const { data } = await api.get('/admin/dishes', { params: { page: nextPage, limit: PAGE_SIZE } });
+    setDishes(data.items);
+    setDishPagination(data.pagination);
+    if (data.pagination.page !== nextPage) {
+      setDishPage(data.pagination.page);
+    }
+  };
+
+  const loadUsers = async () => {
+    const { data } = await api.get('/admin/users');
+    setUsers(data);
   };
 
   useEffect(() => {
-    loadAdmin().catch(console.error);
+    loadAdminDishes(dishPage).catch(console.error);
+  }, [dishPage]);
+
+  useEffect(() => {
+    loadUsers().catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -364,7 +388,11 @@ function AdminPanel({ data, onLogout }) {
     setDishForm(emptyDish);
     setImage(null);
     setImagePreviewUrl('');
-    await loadAdmin();
+    if (dishForm.id) {
+      await loadAdminDishes(dishPage);
+    } else {
+      setDishPage(1);
+    }
   };
 
   const submitUser = async (event) => {
@@ -375,19 +403,19 @@ function AdminPanel({ data, onLogout }) {
       await api.post('/admin/users', userForm);
     }
     setUserForm({ id: null, name: '', email: '', password: '', role: 'admin' });
-    await loadAdmin();
+    await loadUsers();
   };
 
   const deleteDish = async (id) => {
     if (!confirm('Supprimer ce plat ?')) return;
     await api.delete(`/admin/dishes/${id}`);
-    await loadAdmin();
+    await loadAdminDishes(dishPage);
   };
 
   const deleteUser = async (id) => {
     if (!confirm('Supprimer cet utilisateur ?')) return;
     await api.delete(`/admin/users/${id}`);
-    await loadAdmin();
+    await loadUsers();
   };
 
   const submitCategory = async (event) => {
@@ -416,14 +444,14 @@ function AdminPanel({ data, onLogout }) {
     if (!confirm('Supprimer cette categorie et ses sous-categories ?')) return;
     await api.delete(`/admin/categories/${id}`);
     await loadMeta();
-    await loadAdmin();
+    await loadAdminDishes(dishPage);
   };
 
   const deleteSubcategory = async (id) => {
     if (!confirm('Supprimer cette sous-categorie ?')) return;
     await api.delete(`/admin/subcategories/${id}`);
     await loadMeta();
-    await loadAdmin();
+    await loadAdminDishes(dishPage);
   };
 
   return (
@@ -498,7 +526,8 @@ function AdminPanel({ data, onLogout }) {
             </button>
           </form>
 
-          <div className="tablePanel">
+          <div className="stack">
+            <div className="tablePanel">
             {dishes.map((dish) => (
               <article className="adminRow" key={dish.id}>
                 <DishImage dish={dish} />
@@ -514,6 +543,24 @@ function AdminPanel({ data, onLogout }) {
                 </button>
               </article>
             ))}
+            </div>
+            {dishPagination.totalPages > 1 && (
+              <nav className="pagination" aria-label="Pagination admin plats">
+                <button type="button" disabled={dishPage === 1} onClick={() => setDishPage((current) => current - 1)}>
+                  Precedent
+                </button>
+                <span>
+                  Page {dishPage} / {dishPagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={dishPage === dishPagination.totalPages}
+                  onClick={() => setDishPage((current) => current + 1)}
+                >
+                  Suivant
+                </button>
+              </nav>
+            )}
           </div>
         </section>
       )}

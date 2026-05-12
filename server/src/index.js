@@ -12,6 +12,8 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json({ limit: '2mb' }));
@@ -24,6 +26,12 @@ function publicDish(row) {
     price: Number(row.price),
     image_url: row.image_url ? `${process.env.API_BASE_URL || ''}/uploads/${row.image_url}` : null
   };
+}
+
+function parsePagination(query) {
+  const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
+  const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, Number.parseInt(query.limit, 10) || DEFAULT_PAGE_SIZE));
+  return { page, limit };
 }
 
 app.get('/api/health', (_req, res) => {
@@ -53,6 +61,7 @@ app.get('/api/categories', async (_req, res) => {
 
 app.get('/api/dishes', async (req, res) => {
   const { categoryId, subcategoryId, q } = req.query;
+  const { page, limit } = parsePagination(req.query);
   const filters = ['d.is_active = 1'];
   const params = [];
 
@@ -71,29 +80,61 @@ app.get('/api/dishes', async (req, res) => {
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
 
+  const whereClause = filters.join(' AND ');
+  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM dishes d WHERE ${whereClause}`, params);
+  const totalItems = Number(countRows[0]?.total || 0);
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * limit;
+
   const [rows] = await pool.query(
     `SELECT d.*, c.name_fr AS category_fr, c.name_ar AS category_ar,
             s.name_fr AS subcategory_fr, s.name_ar AS subcategory_ar
        FROM dishes d
        LEFT JOIN categories c ON c.id = d.category_id
        LEFT JOIN subcategories s ON s.id = d.subcategory_id
-      WHERE ${filters.join(' AND ')}
-      ORDER BY c.sort_order, s.sort_order, d.sort_order, d.name_fr`,
-    params
+      WHERE ${whereClause}
+      ORDER BY c.sort_order, s.sort_order, d.sort_order, d.name_fr
+      LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
 
-  res.json(rows.map(publicDish));
+  res.json({
+    items: rows.map(publicDish),
+    pagination: {
+      page: currentPage,
+      limit,
+      totalItems,
+      totalPages
+    }
+  });
 });
 
-app.get('/api/admin/dishes', requireAuth, requireAdmin, async (_req, res) => {
+app.get('/api/admin/dishes', requireAuth, requireAdmin, async (req, res) => {
+  const { page, limit } = parsePagination(req.query);
+  const [countRows] = await pool.query('SELECT COUNT(*) AS total FROM dishes');
+  const totalItems = Number(countRows[0]?.total || 0);
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * limit;
   const [rows] = await pool.query(
     `SELECT d.*, c.name_fr AS category_fr, s.name_fr AS subcategory_fr
        FROM dishes d
        LEFT JOIN categories c ON c.id = d.category_id
        LEFT JOIN subcategories s ON s.id = d.subcategory_id
-      ORDER BY d.updated_at DESC`
+      ORDER BY d.updated_at DESC
+      LIMIT ? OFFSET ?`,
+    [limit, offset]
   );
-  res.json(rows.map(publicDish));
+  res.json({
+    items: rows.map(publicDish),
+    pagination: {
+      page: currentPage,
+      limit,
+      totalItems,
+      totalPages
+    }
+  });
 });
 
 app.post('/api/admin/dishes', requireAuth, requireAdmin, upload.single('image'), async (req, res) => {
